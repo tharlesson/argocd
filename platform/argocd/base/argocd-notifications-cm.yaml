@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+data:
+  context: |
+    argocdUrl: https://argocd.example.internal
+  service.slack: |
+    token: $slack-token
+  template.app-sync-status: |
+    message: |
+      Application {{.app.metadata.name}} is now {{.app.status.sync.status}} / {{.app.status.health.status}}
+      Revision: {{.app.status.sync.revision}}
+      URL: {{.context.argocdUrl}}/applications/{{.app.metadata.name}}
+    slack:
+      attachments: |
+        [{"title":"{{.app.metadata.name}}","color":"#18be52"}]
+  trigger.on-sync-failed: |
+    - description: Application sync failed
+      send:
+        - app-sync-status
+      when: app.status.operationState.phase in ['Error', 'Failed']
+  trigger.on-sync-succeeded: |
+    - description: Application sync succeeded
+      send:
+        - app-sync-status
+      when: app.status.operationState.phase in ['Succeeded']
+  subscriptions: |
+    - recipients:
+        - slack:#platform-alerts
+      triggers:
+        - on-sync-failed
+        - on-sync-succeeded

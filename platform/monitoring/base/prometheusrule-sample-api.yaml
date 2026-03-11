@@ -1,0 +1,48 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sample-api-alerts
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: sample-api.rules
+      rules:
+        - alert: SampleApiUnavailable
+          expr: sum(kube_pod_status_ready{namespace=~"sample-api-(dev|stage|prod)",condition="true",pod=~"sample-api-.*"}) < 1
+          for: 2m
+          labels:
+            severity: critical
+            team: api
+          annotations:
+            summary: "Sample API unavailable"
+            description: "No ready pods for sample-api in at least one environment."
+
+        - alert: SampleApiHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{app="sample-api",status=~"5.."}[5m]))
+              /
+              clamp_min(sum(rate(http_requests_total{app="sample-api"}[5m])), 1)
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            team: api
+          annotations:
+            summary: "High 5xx rate on sample-api"
+            description: "5xx error rate above 5% for 5m."
+
+        - alert: SampleApiHighP95Latency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{app="sample-api"}[5m])) by (le)
+            ) > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            team: api
+          annotations:
+            summary: "High p95 latency on sample-api"
+            description: "p95 latency above 800ms for 5m."

@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - servicemonitor-argo-rollouts.yaml
+  - prometheusrule-rollouts.yaml
+  - prometheusrule-sample-api.yaml
+  - dashboards/grafana-dashboard-rollouts.yaml
+  - dashboards/grafana-dashboard-sample-api.yaml

@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: stage
+  namespace: argocd
+spec:
+  description: Staging workloads
+  sourceRepos:
+    - "*"
+  destinations:
+    - namespace: sample-api-stage
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  roles:
+    - name: stage-operator
+      description: Stage operators can sync and rollback
+      policies:
+        - p, proj:stage:stage-operator, applications, get, stage/*, allow
+        - p, proj:stage:stage-operator, applications, sync, stage/*, allow
+        - p, proj:stage:stage-operator, applications, rollback, stage/*, allow
+      groups:
+        - engineering:stage:ops

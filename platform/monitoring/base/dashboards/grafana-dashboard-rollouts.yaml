@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-rollouts
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: grafana
+  annotations:
+    k8s-sidecar-target-directory: /tmp/dashboards/gitops
+data:
+  rollout-status.json: |
+    {
+      "title": "Argo Rollouts Overview",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Healthy Rollouts",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [
+            {"expr": "count(rollout_phase{phase=\"Healthy\"})"}
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Degraded Rollouts",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+          "targets": [
+            {"expr": "count(rollout_phase{phase=\"Degraded\"})"}
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Rollout Phase Timeline",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [
+            {"expr": "sum by (rollout, phase) (rollout_phase)", "legendFormat": "{{rollout}} {{phase}}"}
+          ]
+        }
+      ]
+    }

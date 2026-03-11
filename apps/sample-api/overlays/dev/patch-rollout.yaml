@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: sample-api
+spec:
+  replicas: 2
+  template:
+    spec:
+      containers:
+        - name: sample-api
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+  strategy:
+    canary:
+      steps:
+        - setWeight: 50
+        - pause:
+            duration: 1m
+        - analysis:
+            templates:
+              - templateName: sample-api-analysis
+        - setWeight: 100

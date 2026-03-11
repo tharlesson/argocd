@@ -1,0 +1,22 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-team-label
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-team-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - Rollout
+                - Service
+      validate:
+        message: "label 'team' is required"
+        pattern:
+          metadata:
+            labels:
+              team: "?*"

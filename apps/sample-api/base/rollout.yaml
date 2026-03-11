@@ -1,0 +1,99 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: sample-api
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  rollbackWindow:
+    revisions: 3
+  selector:
+    matchLabels:
+      app: sample-api
+  template:
+    metadata:
+      labels:
+        app: sample-api
+    spec:
+      serviceAccountName: sample-api
+      containers:
+        - name: sample-api
+          image: sample-api:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "0.1.0"
+            - name: APP_ENV
+              valueFrom:
+                configMapKeyRef:
+                  name: sample-api-config
+                  key: APP_ENV
+            - name: FAILURE_RATE
+              valueFrom:
+                configMapKeyRef:
+                  name: sample-api-config
+                  key: FAILURE_RATE
+            - name: API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sample-api-secrets
+                  key: API_KEY
+                  optional: true
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+  strategy:
+    canary:
+      canaryService: sample-api-canary
+      stableService: sample-api-stable
+      trafficRouting:
+        alb:
+          ingress: sample-api
+          rootService: sample-api-root
+          servicePort: 80
+      abortScaleDownDelaySeconds: 30
+      maxSurge: 25%
+      maxUnavailable: 0
+      steps:
+        - setWeight: 10
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: sample-api-analysis
+        - setWeight: 30
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: sample-api-analysis
+        - setWeight: 60
+        - pause:
+            duration: 2m
+        - analysis:
+            templates:
+              - templateName: sample-api-analysis
+        - setWeight: 100

@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sample-api-prod
+resources:
+  - ../../base
+images:
+  - name: sample-api
+    newName: <aws-account-id>.dkr.ecr.<region>.amazonaws.com/sample-api
+    newTag: "prod-initial"
+patchesStrategicMerge:
+  - patch-rollout-bluegreen.yaml
+  - patch-hpa.yaml
+  - patch-ingress.yaml
+  - patch-analysis-template.yaml
+  - patch-externalsecret.yaml
+  - patch-configmap.yaml

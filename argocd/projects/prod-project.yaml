@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: prod
+  namespace: argocd
+spec:
+  description: Production workloads with stricter controls
+  sourceRepos:
+    - "*"
+  destinations:
+    - namespace: sample-api-prod
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  syncWindows:
+    - kind: allow
+      schedule: "0 12 * * 1-5"
+      duration: 10h
+      timeZone: America/Sao_Paulo
+      applications:
+        - workloads-prod
+      manualSync: true
+  roles:
+    - name: prod-approver
+      description: Prod sync/rollback is limited to release managers
+      policies:
+        - p, proj:prod:prod-approver, applications, get, prod/*, allow
+        - p, proj:prod:prod-approver, applications, sync, prod/*, allow
+        - p, proj:prod:prod-approver, applications, rollback, prod/*, allow
+      groups:
+        - engineering:prod:release-managers

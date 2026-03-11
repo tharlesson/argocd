@@ -1,0 +1,63 @@
+name: Build Image and Update Dev Overlay
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/sample-api/app/**
+      - .github/workflows/build-and-update-dev.yaml
+      - github-actions/scripts/update_tag.sh
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  build-push-update:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      OVERLAY_ENV: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        id: build-image
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: sample-api
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG apps/sample-api/app
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "image_name=$REGISTRY/$REPOSITORY" >> "$GITHUB_OUTPUT"
+
+      - name: Update GitOps dev tag
+        run: |
+          chmod +x github-actions/scripts/update_tag.sh
+          github-actions/scripts/update_tag.sh "$OVERLAY_ENV" "${{ steps.build-image.outputs.image_tag }}"
+          sed -i "s#<aws-account-id>.dkr.ecr.<region>.amazonaws.com/sample-api#${{ steps.build-image.outputs.image_name }}#g" apps/sample-api/overlays/$OVERLAY_ENV/kustomization.yaml
+
+      - name: Commit GitOps change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add apps/sample-api/overlays/dev/kustomization.yaml
+          git commit -m "chore(gitops): update dev image to ${{ steps.build-image.outputs.image_tag }}" || echo "No changes"
+          git push

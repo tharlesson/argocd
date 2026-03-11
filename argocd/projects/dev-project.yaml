@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: dev
+  namespace: argocd
+spec:
+  description: Development workloads
+  sourceRepos:
+    - "*"
+  destinations:
+    - namespace: sample-api-dev
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  roles:
+    - name: dev-readonly
+      description: Read only access to dev apps
+      policies:
+        - p, proj:dev:dev-readonly, applications, get, dev/*, allow
+      groups:
+        - engineering:dev:readonly

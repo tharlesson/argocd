@@ -1,0 +1,30 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+
+# Kube tooling
+kubeconfig
+kubeconfig.*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Build artifacts
+*.log
+*.tmp
+dist/
+coverage.xml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local IDE
+.vscode/
+.idea/

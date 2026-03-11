@@ -1,0 +1,14 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: sample-api-analysis
+spec:
+  args:
+    - name: namespace
+      value: sample-api-stage
+    - name: successRateMin
+      value: "98"
+    - name: p95MaxSeconds
+      value: "0.7"
+    - name: readyMin
+      value: "0.98"
