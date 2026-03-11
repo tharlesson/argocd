@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workloads-stage
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: stage
+  source:
+    repoURL: https://github.com/your-org/argocd-gitops.git
+    targetRevision: main
+    path: environments/stage
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: sample-api-stage
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true

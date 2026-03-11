@@ -1,0 +1,46 @@
+name: Smoke Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to test
+        required: true
+        type: choice
+        options:
+          - dev
+          - stage
+          - prod
+      base_url:
+        description: Optional explicit URL (e.g. https://sample-api-dev.example.internal)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve URL
+        id: resolve
+        run: |
+          if [[ -n "${{ inputs.base_url }}" ]]; then
+            URL="${{ inputs.base_url }}"
+          else
+            case "${{ inputs.environment }}" in
+              dev) URL="https://sample-api-dev.example.internal" ;;
+              stage) URL="https://sample-api-stage.example.internal" ;;
+              prod) URL="https://sample-api.example.internal" ;;
+            esac
+          fi
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Health endpoint
+        run: |
+          curl -fSs "${{ steps.resolve.outputs.url }}/health"
+
+      - name: Readiness endpoint
+        run: |
+          curl -fSs "${{ steps.resolve.outputs.url }}/ready"

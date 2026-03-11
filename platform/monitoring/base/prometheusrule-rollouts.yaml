@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: argo-rollouts-alerts
+  labels:
+    role: alert-rules
+spec:
+  groups:
+    - name: argo-rollouts.rules
+      rules:
+        - alert: RolloutAborted
+          expr: max(rollout_phase{phase="Degraded"}) > 0
+          for: 2m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Rollout degraded"
+            description: "One or more rollouts are in degraded phase for > 2m."

@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: sample-api-analysis
+spec:
+  args:
+    - name: namespace
+      value: sample-api-dev
+    - name: successRateMin
+      value: "98"
+    - name: p95MaxSeconds
+      value: "0.7"
+    - name: readyMin
+      value: "0.99"
+  metrics:
+    - name: success-rate
+      interval: 30s
+      count: 4
+      failureLimit: 1
+      successCondition: result[0] >= {{args.successRateMin}}
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            100 * (
+              1 - (
+                sum(rate(http_requests_total{namespace="{{args.namespace}}",app="sample-api",status=~"5.."}[2m]))
+                /
+                clamp_min(sum(rate(http_requests_total{namespace="{{args.namespace}}",app="sample-api"}[2m])), 1)
+              )
+            )
+
+    - name: p95-latency
+      interval: 30s
+      count: 4
+      failureLimit: 1
+      successCondition: result[0] <= {{args.p95MaxSeconds}}
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="{{args.namespace}}",app="sample-api"}[2m])) by (le)
+            )
+
+    - name: readiness-sli
+      interval: 30s
+      count: 4
+      failureLimit: 1
+      successCondition: result[0] >= {{args.readyMin}}
+      provider:
+        prometheus:
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            avg_over_time(sample_api_ready{namespace="{{args.namespace}}",app="sample-api"}[2m])

@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - root-application.yaml
+  - gitops-settings.yaml
+  - ../projects/platform-project.yaml
+  - ../projects/dev-project.yaml
+  - ../projects/stage-project.yaml
+  - ../projects/prod-project.yaml
+  - ../applications/argocd-config-app.yaml
+  - ../applications/platform-app.yaml
+  - ../applications/workloads-dev-app.yaml
+  - ../applications/workloads-stage-app.yaml
+  - ../applications/workloads-prod-app.yaml
+replacements:
+  - source:
+      kind: ConfigMap
+      name: gitops-settings
+      fieldPath: data.repoURL
+    targets:
+      - select:
+          kind: Application
+        fieldPaths:
+          - spec.source.repoURL
+  - source:
+      kind: ConfigMap
+      name: gitops-settings
+      fieldPath: data.revision
+    targets:
+      - select:
+          kind: Application
+        fieldPaths:
+          - spec.source.targetRevision

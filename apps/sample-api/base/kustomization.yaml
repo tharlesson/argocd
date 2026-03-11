@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - configmap.yaml
+  - serviceaccount.yaml
+  - rollout.yaml
+  - service-root.yaml
+  - service-stable.yaml
+  - service-canary.yaml
+  - ingress.yaml
+  - analysis-template.yaml
+  - externalsecret.yaml
+  - poddisruptionbudget.yaml
+  - hpa.yaml
+  - servicemonitor.yaml
+  - networkpolicy.yaml
+commonLabels:
+  app.kubernetes.io/name: sample-api
+  app.kubernetes.io/part-of: gitops-platform
+  team: platform
+images:
+  - name: sample-api
+    newName: sample-api
+    newTag: "0.1.0"

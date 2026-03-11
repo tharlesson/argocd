@@ -1,0 +1,34 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    paths:
+      - terraform/**
+      - .github/workflows/terraform-plan.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        env: [dev, stage, prod]
+    defaults:
+      run:
+        working-directory: terraform/environments/${{ matrix.env }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.10.5
+
+      - name: Terraform init
+        run: terraform init -backend=false
+
+      - name: Terraform plan
+        run: terraform plan -var-file=terraform.tfvars.example -lock=false

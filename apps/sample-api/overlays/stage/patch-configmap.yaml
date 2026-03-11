@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-api-config
+data:
+  APP_ENV: stage
+  LOG_LEVEL: info
+  FAILURE_RATE: "0"
