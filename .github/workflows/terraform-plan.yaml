@@ -8,11 +8,16 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   plan:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         env: [dev, stage, prod]
     defaults:
@@ -20,15 +25,39 @@ jobs:
         working-directory: terraform/environments/${{ matrix.env }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.10.5
+          terraform_wrapper: false
+
+      - name: Configure AWS credentials
+        if: ${{ secrets.AWS_GHA_ROLE_ARN != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check credentials availability
+        id: creds
+        run: |
+          if [ -n "${{ secrets.AWS_GHA_ROLE_ARN }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Terraform init
         run: terraform init -backend=false
 
       - name: Terraform plan
-        run: terraform plan -var-file=terraform.tfvars.example -lock=false
+        if: steps.creds.outputs.available == 'true'
+        run: terraform plan -input=false -var-file=terraform.tfvars.example -lock=false
+
+      - name: Terraform validate fallback (no AWS creds)
+        if: steps.creds.outputs.available != 'true'
+        run: |
+          echo "AWS_GHA_ROLE_ARN nao configurado. Executando terraform validate como fallback."
+          terraform validate
