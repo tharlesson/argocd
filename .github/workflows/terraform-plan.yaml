@@ -16,6 +16,9 @@ env:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+      AWS_GHA_ROLE_ARN: ${{ secrets.AWS_GHA_ROLE_ARN }}
     strategy:
       fail-fast: false
       matrix:
@@ -34,30 +37,21 @@ jobs:
           terraform_wrapper: false
 
       - name: Configure AWS credentials
-        if: ${{ secrets.AWS_GHA_ROLE_ARN != '' }}
+        if: env.AWS_GHA_ROLE_ARN != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_GHA_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Check credentials availability
-        id: creds
-        run: |
-          if [ -n "${{ secrets.AWS_GHA_ROLE_ARN }}" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
+          role-to-assume: ${{ env.AWS_GHA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform init
         run: terraform init -backend=false
 
       - name: Terraform plan
-        if: steps.creds.outputs.available == 'true'
+        if: env.AWS_GHA_ROLE_ARN != ''
         run: terraform plan -input=false -var-file=terraform.tfvars.example -lock=false
 
       - name: Terraform validate fallback (no AWS creds)
-        if: steps.creds.outputs.available != 'true'
+        if: env.AWS_GHA_ROLE_ARN == ''
         run: |
           echo "AWS_GHA_ROLE_ARN nao configurado. Executando terraform validate como fallback."
           terraform validate
